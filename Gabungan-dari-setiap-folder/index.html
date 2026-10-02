@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Perpustakaan DOM</title>
+    <style>
+        /* =========================================
+           CSS SEDERHANA UNTUK TAMPILAN
+           ========================================= */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9fafb; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #2563eb; }
+        
+        form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        input[type="text"] { padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; }
+        button { padding: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .btn-tambah { background-color: #2563eb; color: white; }
+        .btn-tambah:hover { background-color: #1d4ed8; }
+        
+        /* Area List Buku */
+        ul { list-style: none; padding: 0; }
+        li { display: flex; justify-content: space-between; align-items: center; padding: 12px; border: 1px solid #e5e7eb; border-radius: 6px; margin-bottom: 10px; background-color: #f8fafc; }
+        .buku-info { display: flex; flex-direction: column; }
+        .judul { font-weight: bold; font-size: 16px; }
+        .penulis { font-size: 12px; color: #64748b; }
+        
+        .aksi-grup { display: flex; gap: 8px; }
+        .btn-baca { background-color: #10b981; color: white; }
+        .btn-hapus { background-color: #ef4444; color: white; }
+
+        /* =========================================
+           3. MANIPULASI STYLE (CSS CLASS)
+           Class ini akan dipicu (di-toggle) oleh JavaScript
+           ========================================= */
+        .sudah-dibaca {
+            opacity: 0.6;
+            background-color: #e2e8f0;
+        }
+        .sudah-dibaca .judul {
+            text-decoration: line-through;
+        }
+
+        /* Pembungkus untuk test Event Bubbling */
+        #area-luar { border: 2px dashed #cbd5e1; padding: 20px; border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+    <!-- Area luar pembungkus untuk mendemonstrasikan Event Bubbling -->
+    <div id="area-luar">
+        <div class="container">
+            <h1>Perpustakaan Ku</h1>
+
+            <!-- Form Input Buku -->
+            <form id="form-buku">
+                <input type="text" id="input-judul" placeholder="Judul Buku">
+                <input type="text" id="input-penulis" placeholder="Penulis Buku">
+                <button type="submit" class="btn-tambah">Tambah Buku</button>
+            </form>
+
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid #e5e7eb;">
+
+            <!-- Input Pencarian -->
+            <input type="text" id="input-cari" placeholder="Cari buku berdasarkan judul..." style="width: 100%; box-sizing: border-box; margin-bottom: 15px;">
+
+            <!-- Daftar Buku -->
+            <ul id="daftar-buku">
+                <!-- Elemen LI akan di-render di sini oleh JavaScript -->
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // 1. QUERYSELECTOR DAN QUERYSELECTORALL
+        // Digunakan untuk menangkap elemen dari HTML ke dalam variabel JavaScript
+        // =========================================================================
+        const formBuku = document.querySelector('#form-buku');
+        const inputJudul = document.querySelector('#input-judul');
+        const inputPenulis = document.querySelector('#input-penulis');
+        const inputCari = document.querySelector('#input-cari');
+        const daftarBuku = document.querySelector('#daftar-buku');
+        const areaLuar = document.querySelector('#area-luar');
+
+        // =========================================================================
+        // 10. PERPUS (RENDER BUKU + TOMBOL AKSI)
+        // Array untuk menyimpan data sementara. 
+        // =========================================================================
+        let databaseBuku = [];
+
+        function renderBuku() {
+            // Bersihkan list sebelum merender ulang
+            daftarBuku.innerHTML = '';
+
+            // Looping data buku untuk ditampilkan ke layar
+            databaseBuku.forEach((buku, index) => {
+                
+                // =================================================================
+                // 4. MEMBUAT & MENGHAPUS ELEMEN (CreateElement)
+                // =================================================================
+                const li = document.createElement('li');
+
+                // =================================================================
+                // 3. MANIPULASI ATRIBUT DAN STYLE
+                // Menambahkan atribut data-id dan class item-buku
+                // =================================================================
+                li.setAttribute('class', 'item-buku');
+                li.setAttribute('data-id', index);
+
+                // Manipulasi class style jika buku sudah dibaca
+                if (buku.isSelesai) {
+                    li.classList.add('sudah-dibaca');
+                }
+
+                // =================================================================
+                // 2. INNERHTML, TEXTCONTENT, INNERTEXT
+                // Menggunakan innerHTML untuk menyuntikkan struktur HTML ke dalam <li>
+                // =================================================================
+                li.innerHTML = `
+                    <div class="buku-info">
+                        <span class="judul">${buku.judul}</span>
+                        <span class="penulis">${buku.penulis}</span>
+                    </div>
+                    <div class="aksi-grup">
+                        <button class="btn-baca">${buku.isSelesai ? 'Batal Baca' : 'Baca'}</button>
+                        <button class="btn-hapus">Hapus</button>
+                    </div>
+                `;
+
+                // Memasukkan <li> ke dalam <ul>
+                daftarBuku.appendChild(li);
+            });
+        }
+
+
+        // =========================================================================
+        // 5. EVENT LISTENER: CLICK, INPUT, SUBMIT
+        // (Event SUBMIT untuk form tambah buku)
+        // =========================================================================
+        formBuku.addEventListener('submit', function(e) {
+            e.preventDefault(); // Mencegah halaman reload
+
+            // =====================================================================
+            // 8. AMBIL DATA DAN VALIDASI
+            // =====================================================================
+            const judul = inputJudul.value.trim();
+            const penulis = inputPenulis.value.trim();
+
+            if (judul === '' || penulis === '') {
+                alert('Peringatan: Judul dan Penulis wajib diisi!');
+                return; // Hentikan proses jika kosong
+            }
+
+            // Simpan data ke array
+            databaseBuku.push({
+                judul: judul,
+                penulis: penulis,
+                isSelesai: false
+            });
+
+            // Kosongkan form
+            inputJudul.value = '';
+            inputPenulis.value = '';
+
+            // Render ulang layar
+            renderBuku();
+        });
+
+
+        // =========================================================================
+        // 5. EVENT LISTENER: INPUT (Untuk fitur live search / pencarian)
+        // =========================================================================
+        inputCari.addEventListener('input', function(e) {
+            const kataKunci = e.target.value.toLowerCase();
+
+            // [1. querySelectorAll] -> Mengambil semua elemen buku yang sedang tampil
+            const semuaItem = document.querySelectorAll('.item-buku');
+
+            semuaItem.forEach(function(item) {
+                // [9. DOM Traversal Children] -> Mencari anak berelemen class .judul di dalam <li>
+                // [2. textContent] -> Mengambil teks murni untuk dicocokkan
+                const teksJudul = item.querySelector('.judul').textContent.toLowerCase();
+                
+                // [3. Manipulasi Style] -> CSS style display diubah langsung via JavaScript
+                if (teksJudul.includes(kataKunci)) {
+                    item.style.display = 'flex'; // Tampilkan
+                } else {
+                    item.style.display = 'none'; // Sembunyikan
+                }
+            });
+        });
+
+
+        // =========================================================================
+        // 7. EVENT DELEGATION 
+        // Menaruh 1 event 'click' pada container induk (<ul>) untuk mendeteksi 
+        // klik pada tombol Baca dan tombol Hapus di dalamnya.
+        // =========================================================================
+        daftarBuku.addEventListener('click', function(e) {
+            
+            // =====================================================================
+            // 9. DOM TRAVERSAL PARENT DAN CHILDREN
+            // closest() mencari elemen induk terdekat (dalam hal ini tag <li>)
+            // =====================================================================
+            const parentLi = e.target.closest('.item-buku');
+            if (!parentLi) return; // Jika yang diklik bukan area buku, abaikan
+
+            // Ambil index array dari atribut data-id
+            const id = parentLi.getAttribute('data-id');
+
+            // Cek apakah tombol yang diklik adalah tombol HAPUS
+            if (e.target.classList.contains('btn-hapus')) {
+                // =================================================================
+                // 6. EVENT BUBBLING & STOPPROPAGATION
+                // Menghentikan efek klik agar tidak merambat ke parent terluar
+                // =================================================================
+                e.stopPropagation();
+
+                // Hapus data dari array dan render ulang
+                databaseBuku.splice(id, 1);
+                renderBuku();
+                
+                // (Opsi lain tanpa render ulang adalah: parentLi.remove(); )
+            } 
+            
+            // Cek apakah tombol yang diklik adalah tombol BACA
+            else if (e.target.classList.contains('btn-baca')) {
+                e.stopPropagation(); // Mencegah Event Bubbling
+                
+                // Toggle status boolean (true jadi false, false jadi true)
+                databaseBuku[id].isSelesai = !databaseBuku[id].isSelesai;
+                renderBuku();
+            }
+        });
+
+
+        // =========================================================================
+        // PEMBUKTIAN EVENT BUBBLING
+        // Klik di area putus-putus kosong (jangan di tombol), maka pesan ini muncul.
+        // Jika klik di tombol Hapus/Baca, pesan ini tidak muncul karena ada stopPropagation().
+        // =========================================================================
+        areaLuar.addEventListener('click', function() {
+            console.log('EVENT BUBBLING: Kamu mengklik area container luar!');
+        });
+
+    </script>
+</body>
+</html>
